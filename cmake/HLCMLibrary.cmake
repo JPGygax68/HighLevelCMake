@@ -6,30 +6,36 @@ set(_hlcm_library INCLUDED)
 include(_HLCMGetAllLinkLibraries)
 
 
-set(_hlcm_library_syntax
-  "Defines a library target\n"
-  "Usage: hlcm_library([<target>] "
-  "  [SHARED|STATIC]                                # selects library type (default is STATIC)"
-  "  SOURCES <src1>..<srcN>)                        # source files (paths relative to caller directory)"
-  "  HEADERS <hdr1>..<hdrN>                         # header files (paths ditto)"
-  "  PUBLIC_HEADERS <hdr1>..<hdrN>                  # public headers (paths relative to ../include/<namespace> - lower case form!)"
-  "  EXTRA_HEADERS <hdr1>..<hdrN>                   # extra (public) headers, relative to ../include/ (without the namespace)"
-  "  [EXPORT_SET <export_set>]                      # export set; if omitted, same as target"
-  "  [NAMESPACE <Namespace>]                        # override default namespace name (otherwise same as target name)"
-  "  [EXPORT_TRIGGER <trigger_name>]                # override for export trigger symbol (defaults to EXPORT_<TARGET_NAME>)"
-  "  [REQUIRES {[PUBLIC|PRIVATE] <target> [FROM (<package>)]}"
-  ")"
-)
+function (report_error text args)
+
+  string(REPLACE ";" " " args "${args}")
+
+  set(usage
+  "Usage: hlcm_library([<target>]
+    [SHARED|STATIC]                                # selects library type (default is STATIC)
+    SOURCES <src1>..<srcN>)                        # source files (paths relative to caller directory)
+    HEADERS <hdr1>..<hdrN>                         # header files (paths ditto)
+    PUBLIC_HEADERS <hdr1>..<hdrN>                  # public headers (paths relative to ../include/<namespace> - lower case form!)
+    EXTRA_HEADERS <hdr1>..<hdrN>                   # extra (public) headers, relative to ../include/ (without the namespace)
+    [EXPORT_SET <export_set>]                      # export set; if omitted, same as target
+    [NAMESPACE <Namespace>]                        # override default namespace name (otherwise same as target name)
+    [EXPORT_TRIGGER <trigger_name>]                # override for export trigger symbol (defaults to EXPORT_<TARGET_NAME>)
+    [REQUIRES {[PUBLIC|PRIVATE] <target> [FROM (<package>)]}
+  )")
+
+  message(FATAL_ERROR "\nhlcm_library(${args}): ${text}\n${usage}")
+
+endfunction()
 
 function(hlcm_library)
   # Simply pass the list of source (and header) files.
 
-  cmake_parse_arguments(args "SHARED;STATIC" "NAMESPACE;EXPORT_SET;EXPORT_TRIGGER" "SOURCES;HEADERS;PUBLIC_HEADERS;EXTRA_HEADERS" ${ARGN})
+  cmake_parse_arguments(args "SHARED;STATIC;INTERFACE" "NAMESPACE;EXPORT_SET;EXPORT_TRIGGER" "SOURCES;HEADERS;PUBLIC_HEADERS;EXTRA_HEADERS" ${ARGN})
   list(LENGTH args_UNPARSED_ARGUMENTS unparsed_count)
   if (unparsed_count EQUAL "1")
     list(GET args_UNPARSED_ARGUMENTS 0 target_name)
   elseif (unparsed_count GREATER "1")
-    message(FATAL_ERROR "hlcm_module(${ARGN}): second non-option parameter unexpected\n${_hlcm_library_syntax}")
+    report_error("second non-option parameter unexpected" "${ARGN}")
   else()
     set(target_name ${PROJECT_NAME})
   endif()
@@ -40,7 +46,9 @@ function(hlcm_library)
   endif()
   set(library_type "STATIC")
   if (args_SHARED)
-    set(library_type "${args_SHARED}")
+    set(library_type "SHARED")
+  else()
+    set(library_type "INTERFACE")
   endif()
   # TODO: ensure ns_dir is filesystem compatible and all lowercase
   #string(TOLOWER "${namespace}" ns_dir)
@@ -84,27 +92,56 @@ function(hlcm_library)
     message(FATAL_ERROR "No PUBLIC_HEADERS (public headers) specified. You must specify at least one (only specify the path segments after ../include/locsim/ !)")
   endif()
   foreach (hdr ${args_PUBLIC_HEADERS})
-    set(hdr_rp) "../include/${ns_dir}/${hdr}" # relative path
+    set(hdr_rp "../include/${ns_dir}/${hdr}") # relative path
     set(hdr_fp "${PROJECT_SOURCE_DIR}/${hdr_rp}") # full path
     if (NOT EXISTS "${hdr_fp}")
       message(STATUS "Creating public header file \"${hdr}\"")
       file(WRITE "${hdr_fp}" "// Public header file ${hdr} for library ${target_name}\n\n#pragma once")
     endif()
-    list(APPEND pub_hdrs_rp) "${hdr_rp}"
+    list(APPEND pub_hdrs_rp "${hdr_rp}")
     list(APPEND pub_hdrs_fp "${hdr_fp}")
   endforeach()
 
-  message(STATUS "Defining ${library_type} ""${target_name}""")
+  message(STATUS "Defining ${library_type} \"${target_name}\"")
 
-  add_library(${target_name} ${library_type} ${args_SOURCES} ${args_HEADERS} ${pub_hdrs_rp})
-  target_include_directories(${target_name}
-    PRIVATE
-      "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/../include/${ns_dir}/>"
-    PUBLIC
-      "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/../include/>"
-      "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/../include/>"
-      "$<INSTALL_INTERFACE:include>"
-  )
+  if ("${library_type}" STREQUAL "INTERFACE")
+    add_library(${target_name} INTERFACE)
+    foreach(src ${sources})
+        set(src_fp "${PROJECT_SOURCE_DIR}/${src}")
+        list(APPEND srcs_fp "${src_fp}")
+        target_sources(${target_name} INTERFACE
+            $<BUILD_INTERFACE:${src_fp}>
+            $<INSTALL_INTERFACE:src/${target_name}/${src}>
+        )
+    endforeach()
+    foreach(hdr ${headers})
+        set(hdr_fp "${PROJECT_SOURCE_DIR}/${hdr}")
+        list(APPEND hdrs_fp "${hdr_fp}")
+        target_sources(${target_name} INTERFACE
+            $<BUILD_INTERFACE:${hdr_fp}>
+            $<INSTALL_INTERFACE:src/${target_name}/${hdr}>
+        )
+    endforeach()
+    foreach(pub_hdr ${public_headers})
+        set(pubhdr_fp "${PROJECT_SOURCE_DIR}/../include/${target_name}/${pub_hdr}")
+        list(APPEND pubhdrs_fp "${hdr_fp}")
+        target_sources(${target_name} INTERFACE
+            $<BUILD_INTERFACE:${pubhdr_fp}>
+            $<INSTALL_INTERFACE:include/${target_name}/${pub_hdr}>
+        )
+        set_target_properties(${target_name} PROPERTIES PUBLIC_HEADER "../include/${target_name}/${pub_hdr}")
+    endforeach()
+  else()
+    add_library(${target_name} ${library_type} ${args_SOURCES} ${args_HEADERS} ${pub_hdrs_rp})
+    target_include_directories(${target_name}
+      PRIVATE
+        "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/../include/${ns_dir}/>"
+      PUBLIC
+        "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/../include/>"
+        "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/../include/>"
+        "$<INSTALL_INTERFACE:include>"
+    )
+  endif()
   set_target_properties(${target_name} PROPERTIES PUBLIC_HEADER "${pub_hdrs_fp}") # TODO: use the relative paths here?
 
   # Dependencies
@@ -127,8 +164,7 @@ function(hlcm_library)
       list(POP_FRONT requires dummy)
       list(POP_FRONT requires dep_package)
     endif()
-    message(DEBUG "Processing dependency target ""${dep_target}""")
-
+    message(DEBUG "Processing dependency target \"${dep_target}\"")
 
     if (NOT TARGET ${dep_tgt})
       message(STATUS "Dependency \"${dep_tgt}\" not a target yet, looking for it in package \"${dep_pkg}\"")

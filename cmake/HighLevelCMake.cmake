@@ -3,11 +3,12 @@ message(STATUS "Initializing HLCM (High-Level CMake)...")
 # CMake setup
 cmake_policy(SET CMP0057 NEW) # if (... IN_LIST ...) support
 
-include(HLCMAddConfig)
-include(HCLMModule)
+#include(HLCMAddConfig)
+#include(HCLMModule)
 # TODO: ...
-include(LSApplication)
-include(LSLibrary)
+#include(LSApplication)
+include(HLCMLibrary)
+if (0)
 include(LSUseLSModule)
 #include(LSLinkLibrary)
 include(LSLinkBoost)
@@ -20,6 +21,7 @@ include(LSInstallExportSet)
 include(LSInstallPackageConfig)
 include(LSEmbedFile)
 include(LSCopySharedLibs)
+endif()
 
 # Setup
 
