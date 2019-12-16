@@ -108,18 +108,26 @@ function(hlcm_library)
   set_target_properties(${target_name} PROPERTIES PUBLIC_HEADER "${pub_hdrs_fp}") # TODO: use the relative paths here?
 
   # Dependencies
-  foreach(dep IN ${args_REQUIRES})
-    # TODO: going to replace
-    if (NOT "$dep" MATCHES "([^\()]+)(?:\(([^\)])+)\))")
-      message(DEBUG "dependency ""${dep}"" parsed: ""$CMAKE_MATCH_0}"", ""${CMAKE_MATCH_1}"" ""${CMAKE_MATCH_2}""")
-      set(dep_tgt "${CMAKE_MATCH_0}")
-      if (CMAKE_MATCH_1)
-        set(dep_pkg "${CMAKE_MATCH_2}")
-      else()
-        set(dep_pkg "${dep_tgt}")
-      endif()
-    endif()
+  set(cur_dep)
+  set(requires)
+  while (requires)
 
+    set(dep_privacy "PRIVATE")
+
+    list(POP_FRONT requires dep_target)
+    if (NOT requires)
+      break()
+    endif()
+    list(GET requires 0 param)
+    if (("${param}" STREQUAL "PUBLIC") OR ("${param}" STREQUAL "PRIVATE"))
+      list(POP_FRONT requires dep_privacy)
+      list(GET requires 0 param)
+    endif()
+    if ("${param}" STREQUAL "FROM")
+      list(POP_FRONT requires dummy)
+      list(POP_FRONT requires dep_package)
+    endif()
+    message(DEBUG "Processing dependency target ""${dep_target}""")
 
 
     if (NOT TARGET ${dep_tgt})
@@ -145,7 +153,9 @@ function(hlcm_library)
       message(STATUS "Dependency \"${dep}\" already defined as a target, linking as-is")
     endif()
     target_link_libraries(${target} ${privacy} ${dep})
-  endif()
+
+
+  endwhile()
 
   if (0) # From project "Locsim": to use as reference when implementing future extensions
     set_target_properties(${target_name} PROPERTIES DEBUG_POSTFIX "d")
