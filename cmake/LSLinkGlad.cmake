@@ -1,0 +1,37 @@
+if(__ls_link_glad)
+  return()
+endif()
+set(__ls_link_glad INCLUDED)
+
+# TODO: replace with generic ls_link_library()
+
+function(ls_link_glad)
+  message("ls_link_glad() is DEPRECATED. Use find_package() + target_link_libraries()")
+
+  cmake_parse_arguments(args "PUBLIC;PRIVATE" "" "" ${ARGN})
+  if (args_UNPARSED_ARGUMENTS)
+    list(GET args_UNPARSED_ARGUMENTS 0 target_name)
+    list(REMOVE_AT args_UNPARSED_ARGUMENTS 0)
+  else()
+    set(target_name ${PROJECT_NAME})
+  endif()
+  if (args_UNPARSED_ARGUMENTS)
+    message(FATAL_ERROR "Cannot parse argument(s): ${args_UNPARSED_ARGUMENTS}")
+  endif()
+  if (args_PUBLIC)
+    set(visibility "PUBLIC")
+  elseif (args_PRIVATE)
+    set(visibility "PRIVATE")
+  else()
+    set(visibility PUBLIC)
+  endif()
+
+  if (TARGET glad::glad)
+    message(STATUS "Target glad::glad already defined, re-using that.")
+  else()
+    find_package(glad::glad REQUIRED)
+  endif()
+
+  target_link_libraries(${target_name} ${visibility} glad::glad)
+
+endfunction()

@@ -1,0 +1,35 @@
+if(__ls_link_library)
+  return()
+endif()
+set(__ls_link_library INCLUDED)
+
+# TODO: deprecate this (use ls_link_dependency() instead)
+
+function(ls_link_library)
+
+  cmake_parse_arguments(args "PUBLIC;PRIVATE" "" "" ${ARGN})
+  list(GET args_UNPARSED_ARGUMENTS 0 target_name)
+  list(GET args_UNPARSED_ARGUMENTS 1 library)
+  if (args_PUBLIC)
+    set(scope "PUBLIC")
+  endif()
+  if (args_PRIVATE)
+    if (scope)
+      message(FATAL_ERROR "A library cannot be linked as both PUBLIC and PRIVATE")
+    endif()
+    set(scope "PRIVATE")
+  endif()
+  if (NOT scope)
+    set(scope "PRIVATE")
+  endif()
+
+  if (NOT TARGET ${library})
+    find_package(${library} CONFIG REQUIRED)
+    if (NOT TARGET ${library})
+      message(FATAL_ERROR "\"${library}\" is not defined as a target, and could not be found in installed form")
+    endif()
+  endif()
+
+  target_link_libraries(${target_name} ${scope} ${library})
+
+endfunction()
