@@ -11,7 +11,7 @@ function (report_error text args)
   string(REPLACE ";" " " args "${args}")
 
   set(usage
-  "Usage: hlcm_library([<target>]
+  "Usage: HLCM_Library([<target>]
     [SHARED|STATIC]                                # selects library type (default is STATIC)
     SOURCES <src1>..<srcN>)                        # source files (paths relative to caller directory)
     HEADERS <hdr1>..<hdrN>                         # header files (paths ditto)
@@ -27,7 +27,7 @@ function (report_error text args)
 
 endfunction()
 
-function(hlcm_library)
+function(HLCM_Library)
   # Simply pass the list of source (and header) files.
 
   cmake_parse_arguments(args "SHARED;STATIC;INTERFACE" "NAMESPACE;EXPORT_SET;EXPORT_TRIGGER" "SOURCES;HEADERS;PUBLIC_HEADERS;EXTRA_HEADERS" ${ARGN})
@@ -39,6 +39,7 @@ function(hlcm_library)
   else()
     set(target_name ${PROJECT_NAME})
   endif()
+  # TODO: is "namespace" really the correct term here? Could be confused with CMake namespaces
   if (args_NAMESPACE)
     set(namespace ${args_NAMESPACE})
   else()
@@ -50,9 +51,10 @@ function(hlcm_library)
   else()
     set(library_type "INTERFACE")
   endif()
-  # TODO: ensure ns_dir is filesystem compatible and all lowercase
-  #string(TOLOWER "${namespace}" ns_dir)
-  set(ns_dir ${namespace})
+  # TODO: ensure module_dir is filesystem compatible and all lowercase
+  #string(TOLOWER "${namespace}" module_dir)
+  # TODO:
+  set(module_dir ${namespace})
 
   string(MAKE_C_IDENTIFIER "${target_name}" id)
   string(TOUPPER ${id} target_uc)
@@ -92,7 +94,7 @@ function(hlcm_library)
     message(FATAL_ERROR "No PUBLIC_HEADERS (public headers) specified. You must specify at least one (only specify the path segments after ../include/locsim/ !)")
   endif()
   foreach (hdr ${args_PUBLIC_HEADERS})
-    set(hdr_rp "../include/${ns_dir}/${hdr}") # relative path
+    set(hdr_rp "../include/${module_dir}/${hdr}") # relative path
     set(hdr_fp "${PROJECT_SOURCE_DIR}/${hdr_rp}") # full path
     if (NOT EXISTS "${hdr_fp}")
       message(STATUS "Creating public header file \"${hdr}\"")
@@ -135,7 +137,7 @@ function(hlcm_library)
     add_library(${target_name} ${library_type} ${args_SOURCES} ${args_HEADERS} ${pub_hdrs_rp})
     target_include_directories(${target_name}
       PRIVATE
-        "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/../include/${ns_dir}/>"
+        "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/../include/${module_dir}/>"
       PUBLIC
         "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/../include/>"
         "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/../include/>"
@@ -206,7 +208,7 @@ function(hlcm_library)
   endif()
 
   install(TARGETS ${target_name} EXPORT ${export_set}
-    PUBLIC_HEADER DESTINATION "include/${ns_dir}"
+    PUBLIC_HEADER DESTINATION "include/${module_dir}"
     # TODO: set global variables to make this unnecessary (no CMAKE variables are available, HLCM must define its own, e.g. HLCM_ARCHIVE_INSTALL_<CONFIG>_DESTINATION)
     # CONFIGURATIONS DebugLocsim
     #   ARCHIVE DESTINATION "lib$<$<CONFIG:DebugLocsim>:/debuglocsim>"

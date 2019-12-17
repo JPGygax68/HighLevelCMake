@@ -3,11 +3,14 @@ message(STATUS "Initializing HLCM (High-Level CMake)...")
 # CMake setup
 cmake_policy(SET CMP0057 NEW) # if (... IN_LIST ...) support
 
+# TODO: use https://stackoverflow.com/questions/44047551/find-package-config-file-with-components
+#   to re-implement config file generation
+
 #include(HLCMAddConfig)
 #include(HCLMModule)
 # TODO: ...
 #include(LSApplication)
-include(HLCMLibrary)
+include(HLCM_Library)
 if (0)
 include(LSUseLSModule)
 #include(LSLinkLibrary)
