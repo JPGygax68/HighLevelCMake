@@ -106,30 +106,30 @@ function(hlcm_library)
 
   if ("${library_type}" STREQUAL "INTERFACE")
     add_library(${target_name} INTERFACE)
-    foreach(src ${sources})
-        set(src_fp "${PROJECT_SOURCE_DIR}/${src}")
-        list(APPEND srcs_fp "${src_fp}")
-        target_sources(${target_name} INTERFACE
-            $<BUILD_INTERFACE:${src_fp}>
-            $<INSTALL_INTERFACE:src/${target_name}/${src}>
-        )
+    foreach(src ${args_SOURCES})
+      set(src_fp "${PROJECT_SOURCE_DIR}/${src}")
+      list(APPEND srcs_fp "${src_fp}")
+      target_sources(${target_name} INTERFACE
+        $<BUILD_INTERFACE:${src_fp}>
+        $<INSTALL_INTERFACE:src/${target_name}/${src}>
+      )
     endforeach()
-    foreach(hdr ${headers})
-        set(hdr_fp "${PROJECT_SOURCE_DIR}/${hdr}")
-        list(APPEND hdrs_fp "${hdr_fp}")
-        target_sources(${target_name} INTERFACE
-            $<BUILD_INTERFACE:${hdr_fp}>
-            $<INSTALL_INTERFACE:src/${target_name}/${hdr}>
-        )
+    foreach(hdr ${args_HEADERS})
+      set(hdr_fp "${PROJECT_SOURCE_DIR}/${hdr}")
+      list(APPEND hdrs_fp "${hdr_fp}")
+      target_sources(${target_name} INTERFACE
+        $<BUILD_INTERFACE:${hdr_fp}>
+        $<INSTALL_INTERFACE:src/${target_name}/${hdr}>
+      )
     endforeach()
-    foreach(pub_hdr ${public_headers})
-        set(pubhdr_fp "${PROJECT_SOURCE_DIR}/../include/${target_name}/${pub_hdr}")
-        list(APPEND pubhdrs_fp "${hdr_fp}")
-        target_sources(${target_name} INTERFACE
-            $<BUILD_INTERFACE:${pubhdr_fp}>
-            $<INSTALL_INTERFACE:include/${target_name}/${pub_hdr}>
-        )
-        set_target_properties(${target_name} PROPERTIES PUBLIC_HEADER "../include/${target_name}/${pub_hdr}")
+    foreach(pub_hdr ${args_PUBLIC_HEADERS})
+      set(pubhdr_fp "${PROJECT_SOURCE_DIR}/../include/${target_name}/${pub_hdr}")
+      list(APPEND pubhdrs_fp "${hdr_fp}")
+      target_sources(${target_name} INTERFACE
+        $<BUILD_INTERFACE:${pubhdr_fp}>
+        $<INSTALL_INTERFACE:include/${target_name}/${pub_hdr}>
+      )
+      set_target_properties(${target_name} PROPERTIES PUBLIC_HEADER "../include/${target_name}/${pub_hdr}")
     endforeach()
   else()
     add_library(${target_name} ${library_type} ${args_SOURCES} ${args_HEADERS} ${pub_hdrs_rp})
